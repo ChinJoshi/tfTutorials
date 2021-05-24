@@ -15,6 +15,8 @@ zip_file = tf.keras.utils.get_file(origin=_URL,
 
 base_dir = os.path.join(os.path.dirname(zip_file), 'flower_photos')
 
+print("Base Dir: " + base_dir);
+
 classes = ['roses', 'daisy', 'dandelion', 'sunflowers', 'tulips']
 
 for cl in classes:
@@ -22,16 +24,19 @@ for cl in classes:
     images = glob.glob(img_path + '/*.jpg')
     print("{}: {} Images".format(cl, len(images)))
     train, val = images[:round(len(images)*0.8)], images[round(len(images)*0.8):]
+    
 
     for t in train:
         if not os.path.exists(os.path.join(base_dir, 'train', cl)):
             os.makedirs(os.path.join(base_dir, 'train', cl))
-        shutil.move(t, os.path.join(base_dir, 'train', cl))
+        if not os.path.exists(os.path.join(base_dir, 'train', cl,t)):
+            shutil.move(t, os.path.join(base_dir, 'train', cl))
 
     for v in val:
         if not os.path.exists(os.path.join(base_dir, 'val', cl)):
             os.makedirs(os.path.join(base_dir, 'val', cl))
-        shutil.move(v, os.path.join(base_dir, 'val', cl))
+        if not os.path.exists(os.path.join(base_dir, 'val', cl,v)):
+            shutil.move(v, os.path.join(base_dir, 'val', cl))
 
 train_dir = os.path.join(base_dir, 'train')
 val_dir = os.path.join(base_dir, 'val')
@@ -52,23 +57,44 @@ mp_1 = tf.keras.layers.MaxPooling2D( pool_size=(2,2), padding="same");
 model.add(conv_1);
 model.add(mp_1);
 
+drop1 = tf.keras.layers.Dropout(0.2);
+model.add(drop1);
+
 conv_2 = tf.keras.layers.Conv2D(filters=32, kernel_size=(3,3), padding="same", activation=tf.keras.activations.relu);
 mp_2 = tf.keras.layers.MaxPooling2D( pool_size=(2,2), padding="same");
 model.add(conv_2);
 model.add(mp_2);
+
+drop2 = tf.keras.layers.Dropout(0.2);
+model.add(drop2);
 
 conv_3 = tf.keras.layers.Conv2D(filters=64, kernel_size=(3,3), padding="same", activation=tf.keras.activations.relu);
 mp_3 = tf.keras.layers.MaxPooling2D( pool_size=(2,2), padding="same");
 model.add(conv_3);
 model.add(mp_3);
 
+drop3 = tf.keras.layers.Dropout(0.2);
+model.add(drop3);
+
 flatten_1 = tf.keras.layers.Flatten();
-fcn_1 = tf.keras.layers.Dense(units = 512, activation=tf.keras.activations.softmax);
+fcn_1 = tf.keras.layers.Dense(units = 512, activation=tf.keras.activations.relu);
 model.add(flatten_1);
 model.add(fcn_1);
 
-model.compile(optimizer=tf.keras.optimizers.Adam(learning_rate = 0.001), loss=tf.keras.losses.SparseCategoricalCrossentropy(), metrics = [tf.keras.metrics.SparseCategoricalAccuracy()]);
+drop4 = tf.keras.layers.Dropout(0.2);
+model.add(drop4);
 
-epochs = 80;
+fcn2 = tf.keras.layers.Dense(units = len(classes));
+model.add(fcn2);
 
-history = model.fit_generator(generator=train_images, epochs = epochs, verbose = 2, validation_data=valid_images)
+model.compile(optimizer=tf.keras.optimizers.Adam(learning_rate = 0.001), loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True), metrics = [tf.keras.metrics.SparseCategoricalAccuracy()]);
+
+print(model.summary());
+epochs = 5;
+
+history = model.fit_generator(generator=train_images, epochs = epochs, verbose = 2, validation_data=valid_images);
+
+print(history.history);
+plt.plot(history.history['loss']);
+plt.plot(history.history['sparse_categorical_accuracy']);
+plt.show();
